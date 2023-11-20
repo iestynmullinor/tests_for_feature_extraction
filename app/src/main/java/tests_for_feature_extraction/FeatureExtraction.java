@@ -6,6 +6,7 @@ import org.apache.commons.math3.analysis.function.Identity;
 import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.commons.math3.transform.DftNormalization;
 import org.apache.commons.math3.transform.FastFourierTransformer;
 import java.util.ArrayList;
 import java.util.List;
@@ -102,7 +103,7 @@ public class FeatureExtraction {
     }
 
     private static Complex[] performFft(double[] data) {
-        FastFourierTransformer transformer = new FastFourierTransformer(null);
+        FastFourierTransformer transformer = new FastFourierTransformer(DftNormalization.STANDARD);
         return transformer.transform(data, org.apache.commons.math3.transform.TransformType.FORWARD);
     }
 
