@@ -1,8 +1,5 @@
 package tests_for_feature_extraction;
 
-import java.util.Arrays;
-
-import org.apache.commons.math3.analysis.function.Identity;
 import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.linear.Array2DRowRealMatrix;
 import org.apache.commons.math3.linear.RealMatrix;
@@ -10,12 +7,31 @@ import org.apache.commons.math3.transform.DftNormalization;
 import org.apache.commons.math3.transform.FastFourierTransformer;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.differentiation.DerivativeStructure;
-import org.apache.commons.math3.analysis.differentiation.UnivariateDifferentiableFunction;
-import org.apache.commons.math3.analysis.function.Sin;
-import org.apache.commons.math3.analysis.function.Sqrt;
+
 public class FeatureExtraction {
+
+    public static double[][] deepCopy(double[][] original) {
+        if (original == null) {
+            return null;
+        }
+
+        int rows = original.length;
+        if (rows == 0) {
+            return new double[0][0]; // Empty array
+        }
+
+        int cols = original[0].length;
+        double[][] copy = new double[rows][cols];
+
+        for (int i = 0; i < rows; i++) {
+            if (original[i].length != cols) {
+                throw new IllegalArgumentException("Irregular 2D array");
+            }
+            System.arraycopy(original[i], 0, copy[i], 0, cols);
+        }
+
+        return copy;
+    }
 
     public static double[][] normalise(double[][] sequence) {
         /*
@@ -70,15 +86,15 @@ public class FeatureExtraction {
         Complex[] yFft = performFft(paddedYData);
         Complex[] zFft = performFft(paddedZData);
 
-        // Remove the last 3 values from the FFT result
-        Complex[] truncatedXFft = truncateArray(xFft, 3);
-        Complex[] truncatedYFft = truncateArray(yFft, 3);
-        Complex[] truncatedZFft = truncateArray(zFft, 3);
+//        // Remove the last 3 values from the FFT result
+//        Complex[] truncatedXFft = truncateArray(xFft, 3);
+//        Complex[] truncatedYFft = truncateArray(yFft, 3);
+//        Complex[] truncatedZFft = truncateArray(zFft, 3);
 
         // The result is complex numbers, so you may want to take the magnitude
-        double[] xMagnitude = getMagnitude(truncatedXFft);
-        double[] yMagnitude = getMagnitude(truncatedYFft);
-        double[] zMagnitude = getMagnitude(truncatedZFft);
+        double[] xMagnitude = getMagnitude(xFft);
+        double[] yMagnitude = getMagnitude(yFft);
+        double[] zMagnitude = getMagnitude(zFft);
 
         int length = xMagnitude.length;
         double[][] representation = new double[length][3];
@@ -134,6 +150,7 @@ public class FeatureExtraction {
         double[] yDiff = computeDifference(yData);
         double[] zDiff = computeDifference(zData);
 
+
         // Combine the differential values into a representation
         int length = xDiff.length;
         double[][] representation = new double[length + 1][3];
@@ -179,18 +196,23 @@ public class FeatureExtraction {
     }
 
     private static double[] computeDerivative(double[] data) {
-        UnivariateDifferentiableFunction derivativeFunction = new Identity();
         double[] derivative = new double[data.length];
+
         for (int i = 0; i < data.length; i++) {
-            DerivativeStructure x = new DerivativeStructure(1, 1, 0, data[i]);
-            derivative[i] = derivativeFunction.value(x).getPartialDerivative(1);
+            if (i == 0) {
+                derivative[i] = data[i + 1] - data[i];
+            } else if (i == data.length - 1) {
+                derivative[i] = data[i] - data[i - 1];
+            } else {
+                derivative[i] = (data[i + 1] - data[i - 1]) / 2.0;
+            }
         }
         return derivative;
     }
 
-    public static double[][] mergeArrays(double[][] arr1, double[][] arr2, double[][] arr3, double[][] arr4) {
+    public static double[][] mergeArrays(double[][] arr1, double[][] arr2, double[][] arr3) {
         int numRows = arr1.length;
-        int numCols = arr1[0].length + arr2[0].length + arr3[0].length + arr4[0].length;
+        int numCols = arr1[0].length + arr2[0].length + arr3[0].length;
 
         double[][] result = new double[numRows][numCols];
 
@@ -198,7 +220,6 @@ public class FeatureExtraction {
             System.arraycopy(arr1[i], 0, result[i], 0, arr1[i].length);
             System.arraycopy(arr2[i], 0, result[i], arr1[i].length, arr2[i].length);
             System.arraycopy(arr3[i], 0, result[i], arr1[i].length + arr2[i].length, arr3[i].length);
-            System.arraycopy(arr4[i], 0, result[i], arr1[i].length + arr2[i].length + arr3[i].length, arr4[i].length);
         }
 
         return result;
@@ -238,25 +259,20 @@ public class FeatureExtraction {
     }
 
     public static List<Float[]> extract_features(List<Float[]> raw_data) {
+        double[][] data = convertArrayListToDoubleArray(raw_data);
 
-        double[][] raw_data_matrix = convertArrayListToDoubleArray(raw_data);
-
-        double[][] normalized_matrix = normalise(raw_data_matrix);
-
-        //get transform
-        double[][] fourier_transform = fft(normalized_matrix);
+        double[][] normalized_matrix = normalise(deepCopy(data));
 
         //get differentials
-        double[][] differentials = differential(normalized_matrix);
+        double[][] differentials = differential(deepCopy(data));
 
         //get gradients
-        double[][] gradients = derivative(normalized_matrix);
+        double[][] gradients = derivative(deepCopy(data));
 
         //combine into one matrix
-        double[][] combined_data = mergeArrays(normalized_matrix, fourier_transform, differentials, gradients);
+        double[][] combined_data = mergeArrays(normalized_matrix, differentials, gradients);
 
         return convertDoubleArrayToArrayList(combined_data);
-
     }
 
-    }
+}
